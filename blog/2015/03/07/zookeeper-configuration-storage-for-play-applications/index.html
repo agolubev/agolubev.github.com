@@ -5,7 +5,7 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Keep On Moving</title>
+  <title>Zookeeper - Configuration Storage for Play Applications - Keep On Moving</title>
   <meta name="author" content="Alex Golubev">
 
   
@@ -19,7 +19,7 @@ Managing Configuration of Distributed System with Apache &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://agolubev.github.io/">
+  <link rel="canonical" href="http://agolubev.github.io/blog/2015/03/07/zookeeper-configuration-storage-for-play-applications/">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Keep On Moving" type="application/atom+xml">
@@ -64,15 +64,12 @@ Managing Configuration of Distributed System with Apache &hellip;">
 </nav>
   <div id="main">
     <div id="content">
-      <div class="blog-index">
+      <div>
+<article class="hentry" role="article">
   
-  
-  
-    <article>
-      
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2015/03/07/zookeeper-configuration-storage-for-play-applications/">Zookeeper - Configuration Storage for Play Applications</a></h1>
+      <h1 class="entry-title">Zookeeper - Configuration Storage for Play Applications</h1>
     
     
       <p class="meta">
@@ -88,30 +85,100 @@ Managing Configuration of Distributed System with Apache &hellip;">
   </header>
 
 
-  <div class="entry-content"><p>Recently read an article about using zookeeper as configuration storage. It&rsquo;s called
+<div class="entry-content"><p>Recently read an article about using zookeeper as configuration storage. It&rsquo;s called
 <a href="http://sysgears.com/articles/managing-configuration-of-distributed-system-with-apache-zookeeper/">Managing Configuration of Distributed System with Apache ZooKeeper</a>
 The gist there is that Zookeeper as highly available service works perfectly as centralized
 config storage for a cluster. Tree data model helps organizing settings on levels
 and override them if requires. Below I&rsquo;ll present Play plugin to work with Zookeeper as
 well as end to end process of storing/supporting settings</p>
 
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2015/03/07/zookeeper-configuration-storage-for-play-applications/">Read on &rarr;</a>
-    </footer>
-  
+<!-- more -->
 
 
-    </article>
-  
-  <div class="pagination">
-    
-    <a href="/blog/archives">Blog Archives</a>
-    
-  </div>
+<p>data model
+* global
+* data center
+* org
+* service
+* version
+* environment</p>
+
+<p>architecture of standard solutions
+* rest on the top</p>
+
+<p>play solution
+* plugin
+* buch loading on startup
+* parallel
+* priority mechanism</p>
+
+<p>zookeeper utils to simplify everything
+* store config in VC
+* cli tool
+* GUI tool</p>
+
+<p>You&rsquo;ll find this post in your <code>_posts</code> directory - edit this post and re-build (or run with the <code>-w</code> switch) to see your changes!
+To add new posts, simply add a file in the <code>_posts</code> directory that follows the convention: YYYY-MM-DD-name-of-post.ext.</p>
+
+<h2>Sample Heading</h2>
+
+<h3>Sample Heading 2</h3>
+
+<p>Jekyll also offers powerful support for code snippets:</p>
+
+<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="k">def</span> <span class="nf">print_hi</span><span class="p">(</span><span class="nb">name</span><span class="p">)</span>
+  <span class="nb">puts</span> <span class="s2">&quot;Hi, </span><span class="si">#{</span><span class="nb">name</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="k">end</span>
+<span class="n">print_hi</span><span class="p">(</span><span class="s1">&#39;Tom&#39;</span><span class="p">)</span>
+<span class="c1">#=&gt; prints &#39;Hi, Tom&#39; to STDOUT.</span></code></pre></div>
+
+
+<p>Check out the <a href="http://jekyllrb.com">Jekyll docs</a> for more info on how to get the most out of Jekyll. File all bugs/feature requests at <a href="https://github.com/jekyll/jekyll">Jekyll&rsquo;s GitHub repo</a>.</p>
 </div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Alex Golubev</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2015-03-07T17:33:02-05:00'><span class='date'><span class='date-month'>Mar</span> <span class='date-day'>7</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>5:33 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/blog/'>blog</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://agolubev.github.io/blog/2015/03/07/zookeeper-configuration-storage-for-play-applications/" data-via="" data-counturl="http://agolubev.github.io/blog/2015/03/07/zookeeper-configuration-storage-for-play-applications/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
 <aside class="sidebar">
   
     <section>
@@ -160,6 +227,7 @@ well as end to end process of storing/supporting settings</p>
 
   
 </aside>
+
 
     </div>
   </div>

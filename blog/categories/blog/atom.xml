@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Blog | Keep On Moving]]></title>
+  <link href="http://agolubev.github.io/blog/categories/blog/atom.xml" rel="self"/>
+  <link href="http://agolubev.github.io/"/>
+  <updated>2015-03-07T20:15:20-05:00</updated>
+  <id>http://agolubev.github.io/</id>
+  <author>
+    <name><![CDATA[Alex Golubev]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Zookeeper - Configuration Storage for Play Applications]]></title>
+    <link href="http://agolubev.github.io/blog/2015/03/07/zookeeper-configuration-storage-for-play-applications/"/>
+    <updated>2015-03-07T17:33:02-05:00</updated>
+    <id>http://agolubev.github.io/blog/2015/03/07/zookeeper-configuration-storage-for-play-applications</id>
+    <content type="html"><![CDATA[<p>Recently read an article about using zookeeper as configuration storage. It&rsquo;s called
+<a href="http://sysgears.com/articles/managing-configuration-of-distributed-system-with-apache-zookeeper/">Managing Configuration of Distributed System with Apache ZooKeeper</a>
+The gist there is that Zookeeper as highly available service works perfectly as centralized
+config storage for a cluster. Tree data model helps organizing settings on levels
+and override them if requires. Below I&rsquo;ll present Play plugin to work with Zookeeper as
+well as end to end process of storing/supporting settings</p>
+
+<!-- more -->
+
+
+<p>data model
+* global
+* data center
+* org
+* service
+* version
+* environment</p>
+
+<p>architecture of standard solutions
+* rest on the top</p>
+
+<p>play solution
+* plugin
+* buch loading on startup
+* parallel
+* priority mechanism</p>
+
+<p>zookeeper utils to simplify everything
+* store config in VC
+* cli tool
+* GUI tool</p>
+
+<p>You&rsquo;ll find this post in your <code>_posts</code> directory - edit this post and re-build (or run with the <code>-w</code> switch) to see your changes!
+To add new posts, simply add a file in the <code>_posts</code> directory that follows the convention: YYYY-MM-DD-name-of-post.ext.</p>
+
+<h2>Sample Heading</h2>
+
+<h3>Sample Heading 2</h3>
+
+<p>Jekyll also offers powerful support for code snippets:</p>
+
+<p><div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="k">def</span> <span class="nf">print_hi</span><span class="p">(</span><span class="nb">name</span><span class="p">)</span>
+  <span class="nb">puts</span> <span class="o">&amp;</span><span class="n">ldquo</span><span class="p">;</span><span class="no">Hi</span><span class="p">,</span> <span class="c1">#{name}&amp;rdquo;</span>
+<span class="k">end</span>
+<span class="n">print_hi</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lsquo</span><span class="p">;</span><span class="no">Tom</span><span class="o">&amp;</span><span class="n">rsquo</span><span class="p">;)</span><span class="o">&lt;</span><span class="sr">/p&gt;</span>
+
+<span class="sr">&lt;h1&gt;=&gt; prints &amp;lsquo;Hi, Tom&amp;rsquo; to STDOUT.&lt;/</span><span class="n">h1</span><span class="o">&gt;</span>
+
+<span class="o">&lt;</span><span class="nb">p</span><span class="o">&gt;</span></code></pre></div></p>
+
+<p>Check out the <a href="http://jekyllrb.com">Jekyll docs</a> for more info on how to get the most out of Jekyll. File all bugs/feature requests at <a href="https://github.com/jekyll/jekyll">Jekyll&rsquo;s GitHub repo</a>.</p>
+]]></content>
+  </entry>
+  
+</feed>
