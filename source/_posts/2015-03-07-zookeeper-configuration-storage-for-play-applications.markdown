@@ -35,7 +35,7 @@ Second approach is to use Zookeeper as storage for configuration. Zookeeper prov
 *	there is no bulk load ability in Zookeeper API
 *	relatively small size for node values
 
-#### Storing configuration at Zookeeper - overlook
+### Storing configuration at Zookeeper - overlook
 Let's think about what we need to setup storing configuration in ZK and be able to support it:
 
 *	Defining structure of hierarchical configurations
@@ -47,7 +47,7 @@ Let's think about what we need to setup storing configuration in ZK and be able 
 
 Lets quicky run through all these points to show tools and approaches we can use.
 
-####  Structure of configuration
+###  Structure of configuration
 
 The whole tree structure will be very much depend on what services we are using and the whole infrastructure we setup. Still you can consider this list as what we should consider as folders(levels) in config structure.
 
@@ -58,7 +58,7 @@ The whole tree structure will be very much depend on what services we are using 
 * version - need to support different platform/service versions for 24/7 availbilty
 * environment - can be Dev/Stage/QA/Prod
 
-#### Changing configuration
+### Changing configuration
 There are several ways of dealing ith data in Zookeeper. The most routine way is changing somthing via UI tool. There are [Eclipse Plugin][eclips-plugin],
 [Idea Plugin][idea-plugin] (did not work for me though) and standard tool.
 The last one is in Zookeeper distributive and you can run it via 
@@ -84,7 +84,7 @@ There is one tool [zookeeper-util][zookeeper-util] which is on ruby but so it wi
 /conf/dev/web/jdbc.password::password
 ```
 
-#### PlayInZoo - load configuration on play start
+### PlayInZoo - load configuration on play start
 
 PlayInZoo is fairly small plugin that allows you to load configuration from different branches of Zookeeper on startup. You need only to point where zookeeper is and what brunces use for loading. Here is configuration:
 
@@ -103,7 +103,7 @@ playinzoo.paths="/conf/dev/default->/conf/dev/web"
 In example above all properties will be loaded from `default` branch - then from `web` branch. 
 In case `default` already has values for some properties they will be overriden by values from `web`. 
 
-#### References
+### References
 * [PlayInZoo - play plugin to load config from zookeeper][playinzoo]
 * [Managing Configuration of Distributed System with Apache ZooKeeper][manage-config]
 * [How-to: Use Apache ZooKeeper to Build Distributed Apps (and Why)][cli]
