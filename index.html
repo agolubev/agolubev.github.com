@@ -9,8 +9,8 @@
   <meta name="author" content="Alex Golubev">
 
   
-  <meta name="description" content="Recently read an article about using zookeeper as configuration storage. It&rsquo;s called
-Managing Configuration of Distributed System with Apache &hellip;">
+  <meta name="description" content="Most examples you can find are describing &ldquo;Zookeeper service coordination&rdquo; use case:
+&ldquo;Some service registers itself during start in &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -84,17 +84,21 @@ Managing Configuration of Distributed System with Apache &hellip;">
 
 <time class='entry-date' datetime='2015-03-07T17:33:02-05:00'><span class='date'><span class='date-month'>Mar</span> <span class='date-day'>7</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>5:33 pm</span></time>
         
+           | <a href="/blog/2015/03/07/zookeeper-configuration-storage-for-play-applications/#disqus_thread"
+             data-disqus-identifier="http://agolubev.github.io/blog/2015/03/07/zookeeper-configuration-storage-for-play-applications/">Comments</a>
+        
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p>Recently read an article about using zookeeper as configuration storage. It&rsquo;s called
-<a href="http://sysgears.com/articles/managing-configuration-of-distributed-system-with-apache-zookeeper/">Managing Configuration of Distributed System with Apache ZooKeeper</a>
-The gist there is that Zookeeper as highly available service works perfectly as centralized
-config storage for a cluster. Tree data model helps organizing settings on levels
-and override them if requires. Below I&rsquo;ll present Play plugin to work with Zookeeper as
-well as end to end process of storing/supporting settings</p>
+  <div class="entry-content"><p>Most examples you can find are describing &ldquo;Zookeeper service coordination&rdquo; use case:
+&ldquo;Some service registers itself during start in Zookeeper. This way it let others know about his availability.Also this service updates
+information about his state to coordinate efforts with others.&rdquo;
+Another use case, which rarely mentioned, is storing static settings in Zookeeper instead of numerous of property files.
+Despite simplicity of this approach there are several gaps that need to be filled.
+Below I will show advantages and disadvantages of mentioned approach, present Play plugin to work with Zookeeper as
+well as end to end process of storing/supporting settings.</p>
 
 </div>
   
@@ -172,7 +176,29 @@ well as end to end process of storing/supporting settings</p>
 </footer>
   
 
+<script type="text/javascript">
+      var disqus_shortname = 'agolubev';
+      
+        
+        var disqus_script = 'count.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
 
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
 
 
 

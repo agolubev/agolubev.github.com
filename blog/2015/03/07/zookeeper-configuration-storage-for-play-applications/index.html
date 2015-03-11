@@ -9,8 +9,8 @@
   <meta name="author" content="Alex Golubev">
 
   
-  <meta name="description" content="Recently read an article about using zookeeper as configuration storage. It&rsquo;s called
-Managing Configuration of Distributed System with Apache &hellip;">
+  <meta name="description" content="Most examples you can find are describing &ldquo;Zookeeper service coordination&rdquo; use case:
+&ldquo;Some service registers itself during start in &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -81,63 +81,162 @@ Managing Configuration of Distributed System with Apache &hellip;">
 
 <time class='entry-date' datetime='2015-03-07T17:33:02-05:00'><span class='date'><span class='date-month'>Mar</span> <span class='date-day'>7</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>5:33 pm</span></time>
         
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://agolubev.github.io">Comments</a>
+        
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>Recently read an article about using zookeeper as configuration storage. It&rsquo;s called
-<a href="http://sysgears.com/articles/managing-configuration-of-distributed-system-with-apache-zookeeper/">Managing Configuration of Distributed System with Apache ZooKeeper</a>
-The gist there is that Zookeeper as highly available service works perfectly as centralized
-config storage for a cluster. Tree data model helps organizing settings on levels
-and override them if requires. Below I&rsquo;ll present Play plugin to work with Zookeeper as
-well as end to end process of storing/supporting settings</p>
+<div class="entry-content"><p>Most examples you can find are describing &ldquo;Zookeeper service coordination&rdquo; use case:
+&ldquo;Some service registers itself during start in Zookeeper. This way it let others know about his availability.Also this service updates
+information about his state to coordinate efforts with others.&rdquo;
+Another use case, which rarely mentioned, is storing static settings in Zookeeper instead of numerous of property files.
+Despite simplicity of this approach there are several gaps that need to be filled.
+Below I will show advantages and disadvantages of mentioned approach, present Play plugin to work with Zookeeper as
+well as end to end process of storing/supporting settings.</p>
 
 <!-- more -->
 
 
-<p>data model
-* global
-* data center
-* org
-* service
-* version
-* environment</p>
+<p>As you may know Zookeeper is a service for storing and maintaining configuration of distributed systems.
+It provides hierarchy data model wich is perfect for describing complex data centers and organizational structures.
+You can setup zookeeper on several hosts to support fast reads and reliability of the service.
+Nodes define namespaces (ie folders) and can have data attached to them as well as children (files). All nodes can have attached data in binary format.</p>
 
-<p>architecture of standard solutions
-* rest on the top</p>
+<p>Applications are usually rely on set of property files that reflects configuration for some particular environment.
+Approach is Ok when it&rsquo;s few configurations that you need to support (i.e. development, production) and small amount of servers to update config files.
+As soon as number of such configuration variables increases - quantity of supporting configurations rises exponentially.
+For example you have 2 versions of web application that you need to support, 2 data centers, 2 environments like dev and prod and you are supporting two clients (with single tenant architecture). In case you have single config file you&rsquo;d need to support <code>2^4=16</code> configurations. If you have config in different files then only <code>2*4=8</code>.
+But the problem with updating config on each host is still remains. Here we need some mechanism that allows us to:</p>
 
-<p>play solution
-* plugin
-* buch loading on startup
-* parallel
-* priority mechanism</p>
-
-<p>zookeeper utils to simplify everything
-* store config in VC
-* cli tool
-* GUI tool</p>
-
-<p>You&rsquo;ll find this post in your <code>_posts</code> directory - edit this post and re-build (or run with the <code>-w</code> switch) to see your changes!
-To add new posts, simply add a file in the <code>_posts</code> directory that follows the convention: YYYY-MM-DD-name-of-post.ext.</p>
-
-<p><a href="http://sysgears.com/articles/managing-configuration-of-distributed-system-with-apache-zookeeper/">http://sysgears.com/articles/managing-configuration-of-distributed-system-with-apache-zookeeper/</a>
-<a href="http://blog.cloudera.com/blog/2013/02/how-to-use-apache-zookeeper-to-build-distributed-apps-and-why/">http://blog.cloudera.com/blog/2013/02/how-to-use-apache-zookeeper-to-build-distributed-apps-and-why/</a></p>
-
-<h2>Sample Heading</h2>
-
-<h3>Sample Heading 2</h3>
-
-<p>Jekyll also offers powerful support for code snippets:</p>
-
-<div class="highlight"><pre><code class="language-ruby" data-lang="ruby"><span class="k">def</span> <span class="nf">print_hi</span><span class="p">(</span><span class="nb">name</span><span class="p">)</span>
-  <span class="nb">puts</span> <span class="s2">&quot;Hi, </span><span class="si">#{</span><span class="nb">name</span><span class="si">}</span><span class="s2">&quot;</span>
-<span class="k">end</span>
-<span class="n">print_hi</span><span class="p">(</span><span class="s1">&#39;Tom&#39;</span><span class="p">)</span>
-<span class="c1">#=&gt; prints &#39;Hi, Tom&#39; to STDOUT.</span></code></pre></div>
+<ul>
+<li>store configuration in one place to be accessible from any host</li>
+<li>support levels of configuration to have general settings and environment/site specific settings</li>
+<li>still need ability to track configuration in version control</li>
+<li>have some access restrictions to be able to hide access info for production services</li>
+</ul>
 
 
-<p>Check out the <a href="http://jekyllrb.com">Jekyll docs</a> for more info on how to get the most out of Jekyll. File all bugs/feature requests at <a href="https://github.com/jekyll/jekyll">Jekyll&rsquo;s GitHub repo</a>.</p>
+<p>First approach is to use some shared file system. Here we need some additional logic around loading order (for ability to override some settings).
+Second approach is to use Zookeeper as storage for configuration. Zookeeper provides us with all four features we are looking for, still have few minor disadvantages:</p>
+
+<ul>
+<li>there is no bulk load ability in Zookeeper API</li>
+<li>relatively small size for node values</li>
+</ul>
+
+
+<h3>Storing configuration at Zookeeper - overlook</h3>
+
+<p>Let&rsquo;s think about what we need to setup storing configuration in ZK and be able to support it:</p>
+
+<ul>
+<li>Defining structure of hierarchical configurations</li>
+<li>Creating/changing configuration
+
+<ul>
+<li>Using UI/CLI tools</li>
+<li>Import/export to Zookeeper</li>
+<li>Storing in version control system</li>
+</ul>
+</li>
+<li>Loading config on Play application startup</li>
+</ul>
+
+
+<p>Lets quicky run through all these points to show tools and approaches we can use.</p>
+
+<h3>Structure of configuration</h3>
+
+<p>The whole tree structure will be very much depend on what services we are using and the whole infrastructure we setup. Still you can consider this list as what we should consider as folders(levels) in config structure.</p>
+
+<ul>
+<li>global - default settings</li>
+<li>data center - can specify integrations and specific configurations</li>
+<li>organization - will need in case you are supporting several clients</li>
+<li>service - web, message service and any other kings of service specific configurations</li>
+<li>version - need to support different platform/service versions for 24/7 availbilty</li>
+<li>environment - can be Dev/Stage/QA/Prod</li>
+</ul>
+
+
+<h3>Changing configuration</h3>
+
+<p>There are several ways of dealing with data in Zookeeper. The most routine way is changing something via UI tool. There are <a href="http://www.massedynamic.org/mediawiki/index.php?title=Eclipse_Plug-in_for_ZooKeeper">Eclipse Plugin</a>,
+<a href="https://plugins.jetbrains.com/plugin/7364?pr=phpStorm">Idea Plugin</a> (did not work for me though) and standard tool.
+The last one is in Zookeeper distributive and you can run it via</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nb">cd</span> &lt;zk-folder&gt;libexec/contrib/ZooInspector
+</span><span class='line'>java -cp zookeeper-3.4.6-ZooInspector.jar:lib/jtoaster-1.0.4.jar:../../lib/log4j-1.2.16.jar:../../zookeeper-3.4.6.jar org.apache.zookeeper.inspector.ZooInspector
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>There is also a command line utility CLI available in zookeeper installation. You can find good description <a href="http://blog.cloudera.com/blog/2013/02/how-to-use-apache-zookeeper-to-build-distributed-apps-and-why/">here</a>.</p>
+
+<p>The problem here is that there is no standard tool for import and export subtree of Zookeeper data. Well, they have <a href="https://code.google.com/p/bigstreams/source/browse/trunk/zookeeper-rpms/zookeeper/src/main/resources/contrib/zktreeutil/README.txt">zktreeutil</a>
+but it&rsquo;s only for Linux.</p>
+
+<p>There is one tool <a href="https://code.google.com/p/bigstreams/source/browse/trunk/zookeeper-rpms/zookeeper/src/main/resources/contrib/zktreeutil/README.txt">zookeeper-util</a> which is on ruby but so it will work on Mac and Windows. This tool helps keeping config properties up to date in zookeeper and in version control by doing export and import. Also zookeeper-util uses text format so it simplifies moving existing properties files to zookepeer. Export/import format looks like:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>/
+</span><span class='line'>/conf
+</span><span class='line'>/conf/dev
+</span><span class='line'>/conf/dev/web
+</span><span class='line'>/conf/dev/web/jdbc.host::jdbc:mysql://10.10.10.1:3306/
+</span><span class='line'>/conf/dev/web/jdbc.user::dev
+</span><span class='line'>/conf/dev/web/jdbc.password::password
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>PlayInZoo - load configuration on play start</h3>
+
+<p>PlayInZoo is fairly small plugin that allows you to load configuration from different branches of Zookeeper on startup. You need only to point where zookeeper is and what branches to use for loading. Here is configuration:</p>
+
+<figure class='code'><figcaption><span>Global.scala</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">override</span> <span class="k">def</span> <span class="n">onLoadConfig</span><span class="o">(</span><span class="n">config</span><span class="k">:</span> <span class="kt">Configuration</span><span class="o">,</span> <span class="n">path</span><span class="k">:</span> <span class="kt">File</span><span class="o">,</span>
+</span><span class='line'>        <span class="n">classloader</span><span class="k">:</span> <span class="kt">ClassLoader</span><span class="o">,</span> <span class="n">mode</span><span class="k">:</span> <span class="kt">Mode</span><span class="o">)</span><span class="k">:</span> <span class="kt">Configuration</span> <span class="o">=</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">config</span> <span class="o">++</span> <span class="nc">PlayInZoo</span><span class="o">.</span><span class="n">loadConfiguration</span><span class="o">(</span><span class="n">config</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>and</p>
+
+<figure class='code'><figcaption><span>application.conf</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='properties'><span class='line'><span class="na">playinzoo.hosts</span><span class="o">=</span><span class="s">127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002</span>
+</span><span class='line'><span class="na">playinzoo.paths</span><span class="o">=</span><span class="s">&quot;/conf/dev/default-&gt;/conf/dev/web&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In example above all properties will be loaded from <code>default</code> branch - then from <code>web</code> branch.
+In case <code>default</code> already has values for some properties that will be overridden by values from <code>web</code>.</p>
+
+<h3>References</h3>
+
+<ul>
+<li><a href="https://github.com/agolubev/playinzoo">PlayInZoo - play plugin to load config from zookeeper</a></li>
+<li><a href="http://sysgears.com/articles/managing-configuration-of-distributed-system-with-apache-zookeeper/">Managing Configuration of Distributed System with Apache ZooKeeper</a></li>
+<li><a href="http://blog.cloudera.com/blog/2013/02/how-to-use-apache-zookeeper-to-build-distributed-apps-and-why/">How-to: Use Apache ZooKeeper to Build Distributed Apps (and Why)</a></li>
+<li><a href="https://code.google.com/p/bigstreams/source/browse/trunk/zookeeper-rpms/zookeeper/src/main/resources/contrib/zktreeutil/README.txt">zktreeutil util</a></li>
+</ul>
+
+
+<p>Hope this helps with overall understanging of configuration management process with Zookeeper and Play.</p>
 </div>
 
 
@@ -171,6 +270,8 @@ To add new posts, simply add a file in the <code>_posts</code> directory that fo
   
   
   
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
 </div>
 
     
@@ -180,6 +281,12 @@ To add new posts, simply add a file in the <code>_posts</code> directory that fo
     </p>
   </footer>
 </article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -243,7 +350,32 @@ To add new posts, simply add a file in the <code>_posts</code> directory that fo
 </footer>
   
 
+<script type="text/javascript">
+      var disqus_shortname = 'agolubev';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://agolubev.github.io/blog/2015/03/07/zookeeper-configuration-storage-for-play-applications/';
+        var disqus_url = 'http://agolubev.github.io/blog/2015/03/07/zookeeper-configuration-storage-for-play-applications/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
 
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
 
 
 
