@@ -60,6 +60,7 @@ The whole tree structure will be very much depend on what services we are using 
 * service - web, message service and any other kings of service specific configurations
 * version - need to support different platform/service versions for 24/7 availbilty
 * environment - can be Dev/Stage/QA/Prod
+* default - branch for versions, services, etc. default settings
 
 ### Changing configuration
 There are several ways of dealing with data in Zookeeper. The most routine way is changing something via UI tool. There are [Eclipse Plugin][eclipse-plugin],
@@ -67,7 +68,7 @@ There are several ways of dealing with data in Zookeeper. The most routine way i
 The last one is in Zookeeper distributive and you can run it via 
 
 ```sh
-cd <zk-folder>libexec/contrib/ZooInspector
+cd <zk-folder>/contrib/ZooInspector
 java -cp zookeeper-3.4.6-ZooInspector.jar:lib/jtoaster-1.0.4.jar:../../lib/log4j-1.2.16.jar:../../zookeeper-3.4.6.jar org.apache.zookeeper.inspector.ZooInspector
 ```
 There is also a command line utility CLI available in zookeeper installation. You can find good description [here][cli].
