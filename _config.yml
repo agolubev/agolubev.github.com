@@ -95,8 +95,5 @@ delicious_count: 3
 disqus_short_name: agolubev
 disqus_show_comment_count: true
 
-# Google Analytics
-google_analytics_tracking_id:
-
 # Facebook Like
 facebook_like: true
