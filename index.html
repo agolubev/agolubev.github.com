@@ -9,8 +9,8 @@
   <meta name="author" content="Alex Golubev">
 
   
-  <meta name="description" content="Most examples you can find are describing &ldquo;Zookeeper service coordination&rdquo; use case:
-&ldquo;Some service registers itself during start in &hellip;">
+  <meta name="description" content="Most examples you can find in the Internet describe &ldquo;Zookeeper service coordination&rdquo; use case.
+&ldquo;Some service registers itself in &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -31,8 +31,16 @@
 <link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
 <link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
 
-  
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
 
+  ga('create', 'UA-60692024-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
 </head>
 
 <body   >
@@ -92,15 +100,13 @@
   </header>
 
 
-  <div class="entry-content"><p>Most examples you can find are describing &ldquo;Zookeeper service coordination&rdquo; use case:
-&ldquo;Some service registers itself during start in Zookeeper. This way it let others know about his availability.Also this service updates
-information about his state to coordinate efforts with others.&rdquo;
-Another use case, which rarely mentioned, is storing static settings in Zookeeper instead of numerous of property files.
+  <div class="entry-content"><p>Most examples you can find in the Internet describe &ldquo;Zookeeper service coordination&rdquo; use case.
+&ldquo;Some service registers itself in Zookeeper during start. This way it let others know about its availability. Also service updates
+information about its state to coordinate efforts with others.&rdquo;
+Another use case, which rarely mentioned, is storing static settings in Zookeeper rather than in numerous property files.
 Despite simplicity of this approach there are several gaps that need to be filled.
 Below I will show advantages and disadvantages of mentioned approach, present Play plugin to work with Zookeeper as
-well as end to end process of storing/supporting settings.</p>
-
-</div>
+well as end to end process of storing/supporting settings.</div>
   
   
     <footer>

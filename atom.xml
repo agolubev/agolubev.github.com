@@ -4,7 +4,7 @@
   <title><![CDATA[Keep On Moving]]></title>
   <link href="http://agolubev.github.io/atom.xml" rel="self"/>
   <link href="http://agolubev.github.io/"/>
-  <updated>2015-03-10T23:56:30-04:00</updated>
+  <updated>2015-03-12T21:59:33-04:00</updated>
   <id>http://agolubev.github.io/</id>
   <author>
     <name><![CDATA[Alex Golubev]]></name>
@@ -18,38 +18,37 @@
     <link href="http://agolubev.github.io/blog/2015/03/07/zookeeper-configuration-storage-for-play-applications/"/>
     <updated>2015-03-07T17:33:02-05:00</updated>
     <id>http://agolubev.github.io/blog/2015/03/07/zookeeper-configuration-storage-for-play-applications</id>
-    <content type="html"><![CDATA[<p>Most examples you can find are describing &ldquo;Zookeeper service coordination&rdquo; use case:
-&ldquo;Some service registers itself during start in Zookeeper. This way it let others know about his availability.Also this service updates
-information about his state to coordinate efforts with others.&rdquo;
-Another use case, which rarely mentioned, is storing static settings in Zookeeper instead of numerous of property files.
+    <content type="html"><![CDATA[<p>Most examples you can find in the Internet describe &ldquo;Zookeeper service coordination&rdquo; use case.
+&ldquo;Some service registers itself in Zookeeper during start. This way it let others know about its availability. Also service updates
+information about its state to coordinate efforts with others.&rdquo;
+Another use case, which rarely mentioned, is storing static settings in Zookeeper rather than in numerous property files.
 Despite simplicity of this approach there are several gaps that need to be filled.
 Below I will show advantages and disadvantages of mentioned approach, present Play plugin to work with Zookeeper as
-well as end to end process of storing/supporting settings.</p>
+well as end to end process of storing/supporting settings.<!-- more --></p>
 
-<!-- more -->
-
+<hr />
 
 <p>As you may know Zookeeper is a service for storing and maintaining configuration of distributed systems.
-It provides hierarchy data model wich is perfect for describing complex data centers and organizational structures.
+It provides hierarchy data model which is perfect for describing complex data centers and organizational structures.
 You can setup zookeeper on several hosts to support fast reads and reliability of the service.
 Nodes define namespaces (ie folders) and can have data attached to them as well as children (files). All nodes can have attached data in binary format.</p>
 
-<p>Applications are usually rely on set of property files that reflects configuration for some particular environment.
+<p>Applications usually use collection of property files that reflects configuration for some particular environment.
 Approach is Ok when it&rsquo;s few configurations that you need to support (i.e. development, production) and small amount of servers to update config files.
 As soon as number of such configuration variables increases - quantity of supporting configurations rises exponentially.
-For example you have 2 versions of web application that you need to support, 2 data centers, 2 environments like dev and prod and you are supporting two clients (with single tenant architecture). In case you have single config file you&rsquo;d need to support <code>2^4=16</code> configurations. If you have config in different files then only <code>2*4=8</code>.
-But the problem with updating config on each host is still remains. Here we need some mechanism that allows us to:</p>
+For example you have 2 versions of web application that you need to support, 2 data centers, 2 environments like dev and prod and you are supporting two clients (with single tenant architecture). In case you have single config file you&rsquo;d need to support <code>2^4</code> configurations. If you have config in different files then only <code>2*4</code>.
+But the problem with updating config on each host still remains. Here we need some mechanism that allows us to:</p>
 
 <ul>
 <li>store configuration in one place to be accessible from any host</li>
 <li>support levels of configuration to have general settings and environment/site specific settings</li>
 <li>still need ability to track configuration in version control</li>
-<li>have some access restrictions to be able to hide access info for production services</li>
+<li>have some access restrictions to be able to store passwords for production services</li>
 </ul>
 
 
-<p>First approach is to use some shared file system. Here we need some additional logic around loading order (for ability to override some settings).
-Second approach is to use Zookeeper as storage for configuration. Zookeeper provides us with all four features we are looking for, still have few minor disadvantages:</p>
+<p>There are two ways of solving this. First approach is to use some shared file system. Here we need some additional logic around loading order (for ability to override some settings).
+Second approach is to use Zookeeper as storage for configuration. Zookeeper provides us with all four features we are looking for, but has few minor disadvantages:</p>
 
 <ul>
 <li>there is no bulk load ability in Zookeeper API</li>
@@ -59,11 +58,11 @@ Second approach is to use Zookeeper as storage for configuration. Zookeeper prov
 
 <h3>Storing configuration at Zookeeper - overlook</h3>
 
-<p>Let&rsquo;s think about what we need to setup storing configuration in ZK and be able to support it:</p>
+<p>Let&rsquo;s think about what we need to store and maintain config with ZK:</p>
 
 <ul>
 <li>Defining structure of hierarchical configurations</li>
-<li>Creating/changing configuration
+<li>Creating/changing configuration:
 
 <ul>
 <li>Using UI/CLI tools</li>
@@ -75,19 +74,21 @@ Second approach is to use Zookeeper as storage for configuration. Zookeeper prov
 </ul>
 
 
-<p>Lets quicky run through all these points to show tools and approaches we can use.</p>
+<p>Lets quickly run through all these points to show tools and approaches we can use.</p>
 
 <h3>Structure of configuration</h3>
 
-<p>The whole tree structure will be very much depend on what services we are using and the whole infrastructure we setup. Still you can consider this list as what we should consider as folders(levels) in config structure.</p>
+<p>The whole tree structure will vary depends on what services we are using and the whole infrastructure we setup. Still you can consider this list as
+levels in config structure:</p>
 
 <ul>
 <li>global - default settings</li>
 <li>data center - can specify integrations and specific configurations</li>
 <li>organization - will need in case you are supporting several clients</li>
-<li>service - web, message service and any other kings of service specific configurations</li>
-<li>version - need to support different platform/service versions for 24/7 availbilty</li>
+<li>service - web, message service and any other kinds of service specific configurations</li>
+<li>version - need to support different platform/service versions for 24/7 availabilty</li>
 <li>environment - can be Dev/Stage/QA/Prod</li>
+<li>default - branch for versions, services, etc. default settings</li>
 </ul>
 
 
@@ -95,40 +96,24 @@ Second approach is to use Zookeeper as storage for configuration. Zookeeper prov
 
 <p>There are several ways of dealing with data in Zookeeper. The most routine way is changing something via UI tool. There are <a href="http://www.massedynamic.org/mediawiki/index.php?title=Eclipse_Plug-in_for_ZooKeeper">Eclipse Plugin</a>,
 <a href="https://plugins.jetbrains.com/plugin/7364?pr=phpStorm">Idea Plugin</a> (did not work for me though) and standard tool.
-The last one is in Zookeeper distributive and you can run it via</p>
+The last one is in Zookeeper package and you can run it via</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nb">cd</span> &lt;zk-folder&gt;libexec/contrib/ZooInspector
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nb">cd</span> &lt;zk-folder&gt;/contrib/ZooInspector
 </span><span class='line'>java -cp zookeeper-3.4.6-ZooInspector.jar:lib/jtoaster-1.0.4.jar:../../lib/log4j-1.2.16.jar:../../zookeeper-3.4.6.jar org.apache.zookeeper.inspector.ZooInspector
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>There is also a command line utility CLI available in zookeeper installation. You can find good description <a href="http://blog.cloudera.com/blog/2013/02/how-to-use-apache-zookeeper-to-build-distributed-apps-and-why/">here</a>.</p>
+<p>There is also a command line utility CLI available in zookeeper installation. You can find good description in this <a href="http://blog.cloudera.com/blog/2013/02/how-to-use-apache-zookeeper-to-build-distributed-apps-and-why/">post</a>.</p>
 
 <p>The problem here is that there is no standard tool for import and export subtree of Zookeeper data. Well, they have <a href="https://code.google.com/p/bigstreams/source/browse/trunk/zookeeper-rpms/zookeeper/src/main/resources/contrib/zktreeutil/README.txt">zktreeutil</a>
-but it&rsquo;s only for Linux.</p>
+but it&rsquo;s only for Linux. The good thing is that it supports xml format for import/export. Consequently it will be relatively simple to migrate existing property files
+to xml for ZK.</p>
 
-<p>There is one tool <a href="https://code.google.com/p/bigstreams/source/browse/trunk/zookeeper-rpms/zookeeper/src/main/resources/contrib/zktreeutil/README.txt">zookeeper-util</a> which is on ruby but so it will work on Mac and Windows. This tool helps keeping config properties up to date in zookeeper and in version control by doing export and import. Also zookeeper-util uses text format so it simplifies moving existing properties files to zookepeer. Export/import format looks like:</p>
+<p>There is another tool <a href="https://github.com/sroegner/zookeeper-util">zookeeper-util</a> which is on Ruby so it should work for Mac and Windows as well. Unfortunately, it does not.</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>/
-</span><span class='line'>/conf
-</span><span class='line'>/conf/dev
-</span><span class='line'>/conf/dev/web
-</span><span class='line'>/conf/dev/web/jdbc.host::jdbc:mysql://10.10.10.1:3306/
-</span><span class='line'>/conf/dev/web/jdbc.user::dev
-</span><span class='line'>/conf/dev/web/jdbc.password::password
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>PlayInZoo - load configuration on play start</h3>
+<h3>PlayInZoo - loads configuration on Play start</h3>
 
 <p>PlayInZoo is fairly small plugin that allows you to load configuration from different branches of Zookeeper on startup. You need only to point where zookeeper is and what branches to use for loading. Here is configuration:</p>
 
@@ -153,7 +138,7 @@ but it&rsquo;s only for Linux.</p>
 
 
 <p>In example above all properties will be loaded from <code>default</code> branch - then from <code>web</code> branch.
-In case <code>default</code> already has values for some properties that will be overridden by values from <code>web</code>.</p>
+In case <code>default</code> already has values for some properties they will be overridden by values from <code>web</code>.</p>
 
 <h3>References</h3>
 
@@ -165,7 +150,7 @@ In case <code>default</code> already has values for some properties that will be
 </ul>
 
 
-<p>Hope this helps with overall understanging of configuration management process with Zookeeper and Play.</p>
+<p>Hope this helps with overall understanding of configuration management process with Zookeeper and Play.</p>
 ]]></content>
   </entry>
   
