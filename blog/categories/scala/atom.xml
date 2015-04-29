@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Scala | Keep On Moving]]></title>
+  <link href="http://agolubev.github.io/blog/categories/scala/atom.xml" rel="self"/>
+  <link href="http://agolubev.github.io/"/>
+  <updated>2015-04-28T22:57:50-04:00</updated>
+  <id>http://agolubev.github.io/</id>
+  <author>
+    <name><![CDATA[Alex Golubev]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Example of Reactive Solution With Scalaz-stream. Part 1]]></title>
+    <link href="http://agolubev.github.io/blog/2015/04/26/example-of-reactive-solution-with-scalaz-stream-part-1/"/>
+    <updated>2015-04-26T14:16:38-04:00</updated>
+    <id>http://agolubev.github.io/blog/2015/04/26/example-of-reactive-solution-with-scalaz-stream-part-1</id>
+    <content type="html"><![CDATA[<p>In this post I&rsquo;m going to solve a problem of traversing remote tree structure asynchronously using scala. Two approaches will be implemented. First solution will use <code>futures</code>, the second one will be based on event streams with help of <a href="https://github.com/scalaz/scalaz-stream">scalaz-stream</a> library. Both approaches will be reactive by some extent.<!-- more --></p>
+
+<hr />
+
+<p>Idea of reactive programming was expressed for the first time in 1997 in the paper Functional Reactive Animation by Conal Elliot and Paul Hudak. It&rsquo;s not a long ago actually. Still, since then we&rsquo;ve got several stable frameworks and libraries for programming in reactive way.
+Few names come to mind right away: <a href="http://reactivex.io/">ReactiveX</a>, <a href="http://akka.io/">Akka</a>. <a href="https://github.com/scalaz/scalaz-stream">Scalaz-stream</a> is another one that&rsquo;s not so feature reach but is the closest to functional programming paradigm as was branched out from scalaz project. We&rsquo;ll start form pure scala solution and then solve the same problem with help of scalaz-stream. In the next post I&rsquo;m going to compare these two solutions in detail.</p>
+
+<p>Let&rsquo;s start from a problem description. Need to design a tool that traverses tree structure on a remote service and gets data associated with leafs. This is formalization of the problem solved in <a href="https://github.com/agolubev/playinzoo">Playinzoo</a> plugin. Plugin starts with Play framework, reads through tree structures of remote Zookeeper and returns result as configurational attributes. Zookeeper has only commands to get data associated with a node and obtain list of children for specific node. We can expect that algorithm will be pretty much like dealing with tree structures. As we&rsquo;ll work with remote service and probably load configuration for several subtrees it would be good to get data in parallel. That&rsquo;s when the fun begins. With having multiple threads doing something asynchronously we need to avoid mutable state or synchronize access to this state.</p>
+
+<p>Let&rsquo;s speculate on how to solve this. As the first step we can think about simplified problem without parallel loading, that is, no asynchronous calls. Naive approach in this case will be recursive iteration via tree model. We need to have function that does remote calls with error handling. Connection management (aka closing it at the right moment, timeouts) will be simple as well.</p>
+
+<p>With asynchronous loading things become complicated. To manage set of threads we&rsquo;ll need a thread pool explicitly or implicitly. Another problem we need to think about is when we should stop waiting for tasks that are running. As algorithm will be recursive with unknown tree depth we should consider some monitoring functionality. The simplest way here will be: incrementing counter when task is starting and decrementing when it&rsquo;s returning result. When counter is zero it means that there is no tasks running and we can return a result. In addition we&rsquo;ll need some queue to store results of remote calls (like paths to children nodes) and collection to accumulate loaded data from leafs.</p>
+
+<h3>First solution - pure scala</h3>
+
+<p>Ok, let&rsquo;s stop talking and start some coding. First we should decide on data types we are going to use:
+<code>scala
+type NodePath = String
+type NodeData = String
+type Node = (List[NodePath],Option[NodeData])
+</code></p>
+
+<p>Type <code>Node</code> contains information we get from remote service. This can be list of children or node data if it&rsquo;s a leaf.
+With this defined we can implement method for loading node information from remote service asynchronously.</p>
+
+<pre><code class="scala">  def loadNodeInfo(path: NodePath, results: BlockingQueue[Node]) = future {
+    val node:Node = ??? //request remote service: get children, if leaf - get data
+    node
+  } onComplete {
+    case Success(node) =&gt; results.add(node)
+    case Failure(e) =&gt; results.add((Nil,None))
+  }
+</code></pre>
+
+<p>Function <code>loadNodeInfo</code> creates <code>future</code> as task to load data from service. When future is done, result will be added to the blocking queue. Now it&rsquo;s time to implement function that actually do the job of creating futures and processing node information.</p>
+
+<pre><code class="scala">import java.util.concurrent.{LinkedBlockingQueue, BlockingQueue, Executors}
+import java.util.concurrent.atomic.AtomicInteger
+import scala.concurrent._
+import scala.util.{Failure, Success}
+
+implicit val ec = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(8))
+
+def loadFromZk(paths: List[NodePath]): List[NodeData] = {
+
+  //creating future as task to load data from Zk. When it's done - put the result into queue
+  def loadNodeInfo(path:NodePath, results: BlockingQueue[Node]) = {...}
+
+  //collection to accumulate loaded data
+  var readProperties = List.empty[NodeData]
+
+  //point of synchronization of loading tasks and monitor
+  val zkLoadedResults = new LinkedBlockingQueue[Node]()
+  zkLoadedResults.add((paths,None))
+
+  //counter for the running tasks
+  val runningTasksCounter = new AtomicInteger(paths.size)
+
+  var node:Node = null
+  //this is where monitor logic is waiting for tasks result
+  while ( { node = zkLoadedResults.take(); node } != null) {
+    runningTasksCounter.decrementAndGet()
+    for(path &lt;- node._1){
+      runningTasksCounter.incrementAndGet()
+      loadNodeInfo(path, zkLoadedResults)
+    }
+    for(data &lt;- node._2) readProperties = data :: readProperties
+    //if counter is 0 we done
+    if (runningTasksCounter.get == 0) return readProperties
+  }
+  readProperties //actually we'll never rich this point
+}
+</code></pre>
+
+<p>Function <code>loadFromZk</code> which does the magic. It uses <code>zkLoadedResults</code> as a queue for <code>Node</code> information. Method pulls out the next result, creates load task for each received path and adds data to result list in case it&rsquo;s available. <code>runningTasksCounter</code> counts how many tasks are now running. Actually in real life some of them are running but others are waiting for a vacant thread in a pool.</p>
+
+<p>Synchronization between main thread and tasks from pool is done with help of <code>BlockingQueue</code>. Potentially we can add timeout for getting the next result <code>zkLoadedResults.take()</code>. Please note that mutable state (mutable data structures and variables) localized in one method - <code>loadFromZk</code> so solution still can be considered as functional.</p>
+
+<h3>Second solution - scalaz-stream based</h3>
+
+<p>Now let&rsquo;s try to solve the same problem with help of scalaz-stream library. We&rsquo;ll apply reactive approach to process remote service responses. In other words we&rsquo;ll implement event stream based on pull model. In this case we&rsquo;ll have following as events: node paths, node data, running task counter. As there is no much documentation for the library, we will look into second implementation in more detail. As first step  we will create stream with queue as a source.</p>
+
+<pre><code class="scala">import scalaz.stream._
+import scalaz.\/._
+import scalaz.\/
+
+val pathsQueue = async.unboundedQueue[String] //creating queue
+val queueStream: Process[Task, String] = pathsQueue.dequeue //creating stream
+
+val echoStream = queueStream.map(a =&gt; { println(a); a }) //print events 
+Task.fork(echoStream.runLog).runAsync( _ =&gt; () )
+</code></pre>
+
+<p>You can try this on REPL and find out that the last command returns nothing. Actually, it runs stream in a separate thread waiting for new elements in <code>pathsQueue</code>. So if you type <code>pathsQueue.enqueueOne("/firstPath").run</code> in REPL you&rsquo;ll see <code>"/firstPath"</code> as output. Obviously, what we just saw was pulling nature of streams in reacting on some event.</p>
+
+<p>So far so good. Let&rsquo;s add several transformations to the stream to call <code>loadNodeInfo</code> asynchronously and pass the result as event further down the stream. We are going to use the same <code>Node</code> type from the first implementation here as well.</p>
+
+<pre><code class="scala">import scalaz.concurrent._
+import scalaz.stream._
+import scalaz.{\/-, \/}
+//the same data model
+type NodePath = String
+type NodeData = String
+type Node = (List[NodePath], Option[NodeData])
+
+val pathsQueue = async.unboundedQueue[NodePath]
+val loadingStream: Process[Task, NodePath] = pathsQueue.dequeue
+
+def loadNodeInfo(path: NodePath): Node = ???
+
+val loadedData = loadingStream.flatMap[Task, Node](x =&gt;
+  Process.eval(Task.async {
+    cb: ((Throwable \/ Node) =&gt; Unit) =&gt; cb(\/-(loadNodeInfo(x)))
+  }))
+</code></pre>
+
+<p>Starting point for our stream as well as source for events is <code>pathsQueue</code>. It contains node paths as instructions to load children or data (if it&rsquo;s a leaf) from remote service. Queue can be updated asynchronously and for simplicity has no bounds. The line <code>Process.eval(Task.async{...})</code> wraps task into a stream, then it runs async task that will do callback <code>cb</code> as soon as result is ready.</p>
+
+<p>As next step we need to accumulate some statistics along with <code>(List[NodePath], Option[NodeData])</code> to emulate <code>runningTasksCounter</code> for tasks running in parallel.</p>
+
+<pre><code class="scala">val dataAndStatistics = 
+    loadedData.scan[(List[NodePath], Option[NodeData], Int)]((Nil, None, initialNumberOfPaths))((a, c) =&gt; {
+  val stat = a._3 + c._1.size - 1
+  println("* Currently tasks in pool " + stat)
+  if (stat == 0) pathsQueue.close.run 
+  (c._1, c._2, stat)
+})
+</code></pre>
+
+<p>Important line here is one that sends <code>close</code> event to queue <code>pathsQueue.close.run</code> to let all stream activities shut down normally with special <code>Complete</code> event.
+For scan function <code>(a, r)</code> attributes are like for <code>foldLeft</code>. <code>a</code> is accumulated value, <code>c</code> is current pulled event.</p>
+
+<p>At first I thought about splitting stream into two - one will be data oriented, another will gather statistics and shut down system. Unfortunately for now there is no such build-in function in scalaz-stream we can use. (In ReactiveX, for example, there is <code>groupBy</code> function that does what we want.)</p>
+
+<p>Next we need to notify stream that there are other nodes to iterate. To do this we add new paths to the queue and return only <code>Option[NodeData]</code> as event for the next stream as we don&rsquo;t need anything else:
+<code>scala
+val nodeDataStream = dataAndStatistics.map(a =&gt; {
+  if (a._1.nonEmpty) pathsQueue.enqueueAll(a._1).run
+  a._2
+})
+</code>
+Finally we filter out all events with no data and transform <code>Stream[Option[NodeData]]</code> to <code>Stream[NodeData]</code>. After this we get all data from stream by calling <code>runLog</code>. (Alternatively there are possibility to run <code>runLast</code> which returns only last event or <code>run</code> that returns <code>Unit</code>.) <code>runLog</code> function returns <code>Task</code> object. As soon as we are going to run the task synchronously and wait for the result we should call <code>runLog.run</code>.
+<code>scala
+val pureNodeDataStream = nodeDataStream.filter(_.isDefined).map(_.get)
+val result: IndexedSeq[NodeData] = pureNodeDataStream.runLog.run
+</code></p>
+
+<p>Cool! Let&rsquo;s now add some code to emulate remote call with few seconds delay and add some output to verify asynchronous loading:</p>
+
+<pre><code class="scala">def loadNodeInfo(path: NodePath): Node = {
+  println("&gt; Request info for node " + path + " at " + Thread.currentThread().getName)
+  Thread.sleep(2000)
+  println("&lt; Received response for node " + path + " at " + Thread.currentThread().getName)
+  val depth = path.count(_ == '/')
+  if (depth &lt; 3)
+    (path + "/node" + depth :: Nil, None)
+  else
+    (Nil, Some("Data for " + path))
+}
+
+val paths = "/first" :: "/second" :: Nil
+pathsQueue.enqueueAll(paths).run //enqueue paths for root node. enqueueAll returns task so need to call run
+val initialNumberOfPaths = paths.size
+</code></pre>
+
+<p>Function <code>loadNodeInfo</code> emulates request/response to quite slow Zookeeper service. It emulates tree structure as simple chain with 2 folder nodes and data node at the end. The code snippet also adds two paths to queue <code>/first</code> and <code>/second</code> to iterate though these two subtrees.</p>
+
+<p>When we run <a href="https://gist.github.com/agolubev/13bc4c1bc865de97f64c">full code example</a> in REPL we&rsquo;ll see that <code>loadNodeInfo</code> calls are still not running in parallel:</p>
+
+<pre><code class="sh">&gt; Request info for node /first at pool-1-thread-4
+&lt; Received response for node /first at pool-1-thread-4
+* Currently tasks in pool 2
+&gt; Request info for node /second at pool-1-thread-5
+&lt; Received response for node /second at pool-1-thread-5
+* Currently tasks in pool 2
+&gt; Request info for node /first/node1 at pool-1-thread-1
+&lt; Received response for node /first/node1 at pool-1-thread-1
+* Currently tasks in pool 2
+&gt; Request info for node /second/node1 at pool-1-thread-7
+&lt; Received response for node /second/node1 at pool-1-thread-7
+* Currently tasks in pool 2
+&gt; Request info for node /first/node1/node2 at pool-1-thread-1
+&lt; Received response for node /first/node1/node2 at pool-1-thread-1
+* Currently tasks in pool 1
+&gt; Request info for node /second/node1/node2 at pool-1-thread-3
+&lt; Received response for node /second/node1/node2 at pool-1-thread-3
+* Currently tasks in pool 0
+resultStream: IndexedSeq[String] = Vector(Data for /first/node1/node2, Data for /second/node1/node2)
+</code></pre>
+
+<p>We can fix this by create Stream of Streams during <code>loadingStream</code> transformation and using <code>nondeterminism.njoin</code> to merge and send results as events to one stream.</p>
+
+<pre><code class="scala">val loadedData = nondeterminism.njoin(10, 1)(loadingStream.map[Process[Task, Node]](x =&gt;
+  Process.eval(Task.async {
+    cb: ((Throwable \/ Node) =&gt; Unit) =&gt; cb(\/-(loadNodeInfo(x)))
+  })))
+</code></pre>
+
+<p>Few words about magic numbers in njoin call: 10 is pool capacity and 1 is queue length for all tasks running in the pool. You can find final code <a href="https://gist.github.com/agolubev/0c2430c750eaa4096436">here</a>. When we run it we get the correct result:</p>
+
+<pre><code class="sh">&gt; Request info for node /first at pool-1-thread-2
+&gt; Request info for node /second at pool-1-thread-5
+&lt; Received response for node /first at pool-1-thread-2
+&lt; Received response for node /second at pool-1-thread-5
+* Currently tasks in pool 2
+* Currently tasks in pool 2
+&gt; Request info for node /first/node1 at pool-1-thread-1
+&gt; Request info for node /second/node1 at pool-1-thread-6
+&lt; Received response for node /first/node1 at pool-1-thread-1
+* Currently tasks in pool 2
+&gt; Request info for node /first/node1/node2 at pool-1-thread-4
+&lt; Received response for node /second/node1 at pool-1-thread-6
+* Currently tasks in pool 2
+&gt; Request info for node /second/node1/node2 at pool-1-thread-5
+&lt; Received response for node /first/node1/node2 at pool-1-thread-4
+* Currently tasks in pool 1
+&lt; Received response for node /second/node1/node2 at pool-1-thread-5
+* Currently tasks in pool 0
+resultStream: IndexedSeq[String] = Vector(Data for /first/node1/node2, Data for /second/node1/node2)
+</code></pre>
+
+<p>Finally we can see that requests are running in parallel, independently on each other. Consequently, as a result we got functional solution for our tree traversal problem that based on streams and is reactive by it&rsquo;s nature.</p>
+
+<p>As summary I&rsquo;ll provide the list of links I found for getting into reactive programming and scalaz-stream:</p>
+
+<ul>
+<li>A list of good articles is available right on streaz-scala project on <a href="https://github.com/scalaz/scalaz-stream/wiki/Additional-Resources">Additional resources</a> page;</li>
+<li>When you&rsquo;re dealing with scalaz streams it&rsquo;s essential to understand scalaz type - Task. So you should look for short <a href="http://timperrett.com/2014/07/20/scalaz-task-the-missing-documentation/">tutorial</a> about Task as well;</li>
+<li>Also there is a presentation with overview of scalaz-stream functions <a href="http://pchiusano.github.io/talks/scalaz-stream-nescala-2014/scalaz-stream-nescala-2014.html">available here</a>;</li>
+<li>And of course Coursera lectures <a href="https://class.coursera.org/reactive-002">Principles of Reactive Programming</a> that give outstanding vision on this topic.</li>
+</ul>
+
+]]></content>
+  </entry>
+  
+</feed>

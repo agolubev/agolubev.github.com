@@ -1,19 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>http://agolubev.github.io/blog/2015/04/26/example-of-reactive-solution-with-scalaz-stream-part-1/</loc>
+    <lastmod>2015-04-26T14:16:38-04:00</lastmod>
+  </url>
+  <url>
     <loc>http://agolubev.github.io/blog/2015/03/07/zookeeper-configuration-storage-for-play-applications/</loc>
     <lastmod>2015-03-07T17:33:02-05:00</lastmod>
   </url>
   <url>
     <loc>http://agolubev.github.io/blog/archives/</loc>
-    <lastmod>2015-03-12T22:19:20-04:00</lastmod>
+    <lastmod>2015-04-28T22:57:50-04:00</lastmod>
   </url>
   <url>
     <loc>http://agolubev.github.io/</loc>
-    <lastmod>2015-03-12T22:19:20-04:00</lastmod>
+    <lastmod>2015-04-28T22:57:50-04:00</lastmod>
   </url>
   <url>
     <loc>http://agolubev.github.io/about/</loc>
-    <lastmod>2015-03-12T22:19:20-04:00</lastmod>
+    <lastmod>2015-04-28T22:57:50-04:00</lastmod>
   </url>
 </urlset>
