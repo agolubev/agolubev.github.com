@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Scala | Keep On Moving]]></title>
   <link href="http://agolubev.github.io/blog/categories/scala/atom.xml" rel="self"/>
   <link href="http://agolubev.github.io/"/>
-  <updated>2015-04-28T22:57:50-04:00</updated>
+  <updated>2015-04-28T22:58:44-04:00</updated>
   <id>http://agolubev.github.io/</id>
   <author>
     <name><![CDATA[Alex Golubev]]></name>
@@ -96,7 +96,7 @@ def loadFromZk(paths: List[NodePath]): List[NodeData] = {
 
 <p>Synchronization between main thread and tasks from pool is done with help of <code>BlockingQueue</code>. Potentially we can add timeout for getting the next result <code>zkLoadedResults.take()</code>. Please note that mutable state (mutable data structures and variables) localized in one method - <code>loadFromZk</code> so solution still can be considered as functional.</p>
 
-<h3>Second solution - scalaz-stream based</h3>
+<h3>Second solution - based on scalaz-stream</h3>
 
 <p>Now let&rsquo;s try to solve the same problem with help of scalaz-stream library. We&rsquo;ll apply reactive approach to process remote service responses. In other words we&rsquo;ll implement event stream based on pull model. In this case we&rsquo;ll have following as events: node paths, node data, running task counter. As there is no much documentation for the library, we will look into second implementation in more detail. As first step  we will create stream with queue as a source.</p>
 
